@@ -2,19 +2,14 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import FileResponse
 import pandas as pd
 import tempfile
-from io import StringIO # <-- Importación necesaria para manejar el contenido en memoria
+from io import StringIO 
 
 app = FastAPI()
 
-# Función que procesa los archivos CSV (No necesita cambio)
-def procesar_archivos(valores_buffer, personas_buffer): # <-- Ahora espera buffers (StringIO)
-    # Pandas puede leer directamente desde StringIO
+def procesar_archivos(valores_buffer, personas_buffer): 
     valores = pd.read_csv(valores_buffer)
     personas = pd.read_csv(personas_buffer)
 
-    # ... (El resto de tu lógica de pandas permanece igual) ...
-    # No se muestra el código completo de Pandas aquí por brevedad, pero
-    # asume que el resto de 'procesar_archivos' sigue intacto.
 
     personas['CELULAR_1'] = personas['CELULAR_1'].astype(str).str.replace('.0', '', regex=False)
 
@@ -66,29 +61,22 @@ def procesar_archivos(valores_buffer, personas_buffer): # <-- Ahora espera buffe
     return resultado[columnas_finales]
 
 
-# Endpoint para procesar archivos y devolver CSV (CORREGIDO)
 @app.post("/procesar")
 async def procesar(
     valores: UploadFile = File(...),
     personas: UploadFile = File(...)
 ):
-    # 1. Leer el contenido del archivo de forma asíncrona
-    # Nota: .read() lee todo el contenido en memoria (cuidado con archivos gigantes)
+
     valores_content = await valores.read()
     personas_content = await personas.read()
 
-    # 2. Convertir el contenido binario a un buffer de texto (StringIO) para Pandas
-    # Esto es crucial para que pd.read_csv funcione correctamente con el contenido en memoria
+
     valores_buffer = StringIO(valores_content.decode('utf-8'))
     personas_buffer = StringIO(personas_content.decode('utf-8'))
 
-    # 3. Llamar a la función de procesamiento con los buffers
     df = procesar_archivos(valores_buffer, personas_buffer)
 
-    # 4. Guardar en archivo temporal
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
-    # Nota: Se usa 'utf-8-sig' para asegurar que Excel lea correctamente los acentos
     df.to_csv(tmp.name, index=False, encoding="utf-8-sig")
 
-    # 5. Devolver archivo CSV real
     return FileResponse(tmp.name, filename="resultado.csv", media_type="text/csv")
