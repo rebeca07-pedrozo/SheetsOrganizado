@@ -13,8 +13,8 @@ WITH leads_ordenados AS (
       ORDER BY FECHA_LEAD DESC
     ) as ranking_reciente,
     COUNT(*) OVER(PARTITION BY KEY_ID) as total_contactos
-  FROM `sb-ecosistemaanalitico-lago.contact_center.t_seguimiento_leads_mercadeo`
-  WHERE PRODUCTO_SELECCIONADO = 'PROTECCION DE CREDITOS'
+  FROM sb-ecosistemaanalitico-lago.contact_center.t_seguimiento_leads_mercadeo
+  WHERE PRODUCTO_SELECCIONADO = 'PORTAFOLIO TRANQUILIDAD EN VIDA'
     AND KEY_ID IS NOT NULL
 )
 
