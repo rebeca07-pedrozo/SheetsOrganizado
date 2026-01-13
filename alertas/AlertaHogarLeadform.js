@@ -1,4 +1,4 @@
-function revisarRegistrosDatos() {
+function revisarLeadform() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var hoja = ss.getSheetByName("Leadform");  
   if (!hoja) {
