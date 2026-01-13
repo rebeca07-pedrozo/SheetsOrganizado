@@ -13,7 +13,6 @@ function revisarRegistrosDatos() {
     return;
   }
 
-  // Cambiado a columna 11 (Columna K)
   var columnaK = 11; 
   var datos = hoja.getRange(2, columnaK, lastRow - 1, 1).getValues();
 
@@ -22,7 +21,6 @@ function revisarRegistrosDatos() {
   var ayer = new Date(hoy);
   ayer.setDate(hoy.getDate() - 1);
   
-  // Normalizamos ayer para comparar solo fechas (sin horas)
   var fechaAyerStr = Utilities.formatDate(ayer, tz, "yyyy-MM-dd");
   
   var huboRegistros = false;
@@ -33,7 +31,6 @@ function revisarRegistrosDatos() {
     var cell = datos[r][0];
     var fecha = null;
 
-    // Validación y parseo de fecha
     if (cell instanceof Date && !isNaN(cell.getTime())) {
       fecha = cell;
     } else if (typeof cell === 'string' && cell.trim() !== '') {
@@ -76,7 +73,6 @@ function revisarRegistrosDatos() {
     MailApp.sendEmail("rebeca.pedrozo@segurosbolivar.com", copiaAsunto, mensajeRebe);
 
   } else {
-    // Si hubo registros, solo notificamos a Rebeca
     var asuntoExito = "Reporte: Sí hubo leads en Datos el " + fechaAyerStr;
     var mensajeExito = "Se detectaron " + filasEncontradas.length + " registros en la hoja 'Datos' el " + fechaAyerStr + ".\n\n" +
                        "Ejemplos:\n" + JSON.stringify(filasEncontradas.slice(0,5)) + "\n\n" +
