@@ -65,7 +65,7 @@ function revisarLeadform() {
   ];
 
   if (!huboRegistros) {
-    var asuntoJefes = "Alerta: No hubo registros en datos HOGAR el " + fechaAyerStr;
+    var asuntoJefes = "Alerta: No hubo registros en leadform HOGAR el " + fechaAyerStr;
     var mensajeJefes = "Hola,\n\nNo se detectaron nuevos registros en la hoja 'Datos' durante el día de ayer (" + fechaAyerStr + ").\n\n" +
                        "Puedes revisar el archivo aquí: " + urlHoja;
 
@@ -78,7 +78,7 @@ function revisarLeadform() {
     MailApp.sendEmail("rebeca.pedrozo@segurosbolivar.com", asuntoRebeCopia, mensajeRebeCopia);
 
   } else {
-    var asuntoExito = "Reporte: Sí hubo registros en en datos HOGAR el " + fechaAyerStr;
+    var asuntoExito = "Reporte: Sí hubo registros en en leadform HOGAR el " + fechaAyerStr;
     var mensajeExito = "Se detectaron " + filasEncontradas.length + " registros de ayer en la columna O.\n\n" +
                        "DETALLE DE FILAS ENCONTRADAS:\n" + 
                        JSON.stringify(filasEncontradas, null, 2) + "\n\n" +
