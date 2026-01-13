@@ -90,8 +90,7 @@ function revisarRegistros() {
       "anamilena.roa@segurosbolivar.com",
       "diana.cordoba@segurosbolivar.com",
       "nohora.jaimes@segurosbolivar.com",
-      "sebastian.daza@segurosbolivar.com",
-      "maria.camila.rodriguez@segurosbolivar.com"
+      "sebastian.daza@segurosbolivar.com"
     ];
     var urlHoja = ss.getUrl();
 
@@ -202,8 +201,7 @@ function revisarRegistrosDatos() {
       "anamilena.roa@segurosbolivar.com",
       "diana.cordoba@segurosbolivar.com",
       "nohora.jaimes@segurosbolivar.com",
-      "sebastian.daza@segurosbolivar.com",
-      "maria.camila.rodriguez@segurosbolivar.com"
+      "sebastian.daza@segurosbolivar.com"
     ];
 
     var asunto = "Alerta: No hubo leads en Tranquilidad Pymes DATOS el " + fechaAyerStr;
