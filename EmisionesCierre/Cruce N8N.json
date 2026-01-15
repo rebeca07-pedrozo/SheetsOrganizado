@@ -1,0 +1,192 @@
+{
+  "name": "Cruce salud automático",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Cargar documentos ",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "archivo_valores",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "acceptFileTypes": "csv",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "archivo_personas",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "acceptFileTypes": "csv",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6a3ed8c7-45bf-490e-82d8-e20342218fcb",
+      "name": "On form submission",
+      "webhookId": "39cf9f8c-eeb5-4ec9-b6fa-c80dc1c3dbff",
+      "alwaysOutputData": true,
+      "executeOnce": false
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        624,
+        64
+      ],
+      "id": "8011939a-468e-4c0e-afd0-48cb9a8b674f",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "archivo_valores",
+        "options": {
+          "headerRow": true
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        256,
+        0
+      ],
+      "id": "f459a16b-a983-4299-b2ae-b721a181e616",
+      "name": "VALORES",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "archivo_personas",
+        "options": {
+          "headerRow": true
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        256,
+        192
+      ],
+      "id": "59bc9c5e-5f1e-4868-8a92-24a00ea82ad9",
+      "name": "PERSONAS",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "resource": "spreadsheet",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1088,
+        64
+      ],
+      "id": "2ebf1dc2-1149-4660-98cb-5b84dc163417",
+      "name": "Create spreadsheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "8vAEFTWbahyEdN86",
+          "name": "Credencial Google Sheets César Porras"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// =======================================================\n// PASO 0: Función de utilidad para asegurar que la entrada es un array\n// =======================================================\n\nconst ensureArray = (data) => {\n    // Si la entrada es nula o indefinida, devolvemos un array vacío.\n    if (!data) return []; \n    \n    // Si es un objeto, pero no un array (ej. un solo registro), lo envolvemos.\n    if (typeof data === 'object' && !Array.isArray(data)) {\n        return [data];\n    }\n    // Si ya es un array, lo devolvemos.\n    return Array.isArray(data) ? data : [];\n};\n\n\n// =======================================================\n// PASO 1: Cargar y preparar los datos de entrada\n// Asumiendo que el MERGE devuelve: Input 0 = valores, Input 1 = personas\n// =======================================================\n\nconst inputItems = $input.all();\n\n// Input 0: 'valores'\nconst valoresRaw = inputItems[0]?.json;\nconst valores = ensureArray(valoresRaw);\n\n// Input 1: 'personas'\nconst personasRaw = inputItems[1]?.json;\nconst personas = ensureArray(personasRaw);\n\n\n// =======================================================\n// PASO 2: Crear un mapa de búsqueda para los 'valores' (PRIMA)\n// =======================================================\nconst primaMap = new Map();\nfor (const item of valores) {\n    // Utilizamos String() para asegurar que el tipo de clave sea consistente.\n    if (item.numero_poliza) {\n        primaMap.set(String(item.numero_poliza).trim(), item.PRIMA);\n    }\n}\n\n// =======================================================\n// PASO 3: Agrupación y Agregación (Simulación del .groupby().agg() de Pandas)\n// =======================================================\nconst agrupadoMap = new Map();\n\nfor (const persona of personas) {\n    // Limpieza y validación de la clave de agrupación\n    const poliza = String(persona.numero_poliza || '').trim(); \n    if (!poliza || poliza.length === 0) continue; // Saltar si la clave está vacía\n\n    if (!agrupadoMap.has(poliza)) {\n        // Inicializar el nuevo grupo con los primeros valores (first)\n        agrupadoMap.set(poliza, {\n            numero_poliza: poliza,\n            clave_agente: persona.clave_agente,\n            codigo_producto: persona.codigo_producto,\n            fecha_emision: persona.fecha_emision,\n            nombre_producto: persona.nombre_producto,\n            nombre_opcion_poliza: persona.nombre_opcion_poliza,\n            tipo_documento: persona.tipo_documento,\n            FECHA_PROCESO: persona.FECHA_PROCESO,\n            // Sets para recoger valores únicos y simular join(', ').join(sorted(set(x)))\n            NUMERO_DOCUMENTO: new Set(),\n            NOMBRE: new Set(),\n            CORREO_1: new Set(),\n            CELULAR_1: new Set(),\n        });\n    }\n\n    const grupo = agrupadoMap.get(poliza);\n\n    // Limpieza de celular\n    let celular = String(persona.CELULAR_1 || '').replace('.0', '').trim();\n    if (celular) {\n        grupo.CELULAR_1.add(celular);\n    }\n    \n    // Recolección de valores únicos\n    if (persona.NUMERO_DOCUMENTO) {\n        grupo.NUMERO_DOCUMENTO.add(String(persona.NUMERO_DOCUMENTO).trim());\n    }\n    if (persona.NOMBRE) {\n        grupo.NOMBRE.add(String(persona.NOMBRE).trim());\n    }\n    if (persona.CORREO_1) {\n        grupo.CORREO_1.add(String(persona.CORREO_1).trim());\n    }\n}\n\nlet resultado = Array.from(agrupadoMap.values()).map(grupo => {\n    \n    // Función auxiliar para ordenar y unir los sets de valores\n    const sortedSetToArray = (set) => Array.from(set).sort();\n    \n    const docList = sortedSetToArray(grupo.NUMERO_DOCUMENTO);\n    const nameList = sortedSetToArray(grupo.NOMBRE);\n    const mailList = sortedSetToArray(grupo.CORREO_1);\n    const celularList = sortedSetToArray(grupo.CELULAR_1);\n\n    // Obtener el primer celular único (o vacío)\n    const celularUnico = celularList.length > 0 ? celularList[0] : '';\n    \n    return {\n        // Campos 'first'\n        numero_poliza: grupo.numero_poliza,\n        clave_agente: grupo.clave_agente,\n        codigo_producto: grupo.codigo_producto,\n        fecha_emision: grupo.fecha_emision,\n        nombre_producto: grupo.nombre_producto,\n        nombre_opcion_poliza: grupo.nombre_opcion_poliza,\n        tipo_documento: grupo.tipo_documento,\n        FECHA_PROCESO: grupo.FECHA_PROCESO,\n        \n        // Campos agregados (unidos por coma)\n        NUMERO_DOCUMENTO: docList.join(', '),\n        NOMBRE: nameList.join(', '),\n        CORREO_1: mailList.join(', '),\n        CELULAR_1: celularUnico,\n        \n        // Prima (Merge/Left Join)\n        Prima_totalizada: primaMap.get(grupo.numero_poliza) || 0,\n    };\n});\n\n\n// =======================================================\n// PASO 4: Implementar la función expandir_columna (Split)\n// =======================================================\nfunction expandirColumna(df, columnaBase, prefijo) {\n    const expandedResults = [];\n\n    for (const row of df) {\n        const valoresRaw = String(row[columnaBase] || '');\n        // Split, trim, y filtrar vacíos\n        const listas = valoresRaw.split(',')\n                                .map(i => i.trim())\n                                .filter(i => i.length > 0);\n        \n        const newRow = { ...row };\n        delete newRow[columnaBase]; \n\n        // Asignar los valores a las nuevas columnas dinámicas\n        for (let i = 0; i < listas.length; i++) {\n            newRow[`${prefijo}_${i + 1}`] = listas[i];\n        }\n\n        expandedResults.push(newRow);\n    }\n    return expandedResults;\n}\n\n// Aplicar la expansión al resultado (sobre NUMERO_DOCUMENTO)\nresultado = expandirColumna(resultado, 'NUMERO_DOCUMENTO', 'Numero_documento');\n\n\n// =======================================================\n// PASO 5: Renombrar y seleccionar columnas finales\n// =======================================================\nconst columnasFinales = [\n    'emisiones', 'revision agente', 'codigo_producto', 'clave_agente', 'numero_poliza',\n    'fecha_emision', 'nombre_producto', 'nombre_opcion_poliza', 'Prima_totalizada',\n    'CORREO_1', 'Numero_documento_1', 'tipo_documento', 'Numero_documento_2',\n    'FECG', 'telefono'\n];\n\nconst resultadoFinal = resultado.map(row => {\n    // Renombrar y asignar\n    row.FECG = row.FECHA_PROCESO; \n    row.telefono = row.CELULAR_1; \n    \n    const finalItem = {};\n\n    for (const col of columnasFinales) {\n        // Seleccionar las columnas, asignando '' si no existen.\n        finalItem[col] = row[col] !== undefined ? row[col] : '';\n    }\n\n    return finalItem;\n});\n\n\n// =======================================================\n// PASO 6: Devolver el resultado (¡CORREGIDO PARA ITERAR!)\n// =======================================================\n\n// Convertimos cada objeto del array 'resultadoFinal' en un objeto\n// con la estructura { json: row } para generar un ítem de salida por cada registro.\nreturn resultadoFinal.map(row => ({\n    json: row\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        64
+      ],
+      "id": "098ab8dd-5779-4719-b113-b06cc73118cf",
+      "name": "CODIGO"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "VALORES",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PERSONAS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "CODIGO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VALORES": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PERSONAS": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "CODIGO": {
+      "main": [
+        [
+          {
+            "node": "Create spreadsheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "82cdc63c-8f59-4610-b907-b8306f14f721",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1a8f90e8f70e67024b7aab9c2b578e521fdff9f6dc3445fee7260379a4e65592"
+  },
+  "id": "bbOKNZwnNIh1QdDz",
+  "tags": []
+}
